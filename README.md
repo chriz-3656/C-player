@@ -24,9 +24,9 @@ It is designed to be **lightweight, fast, keyboard-driven**, and ideal for Linux
 
 ![C-PLAYER Screenshot](assets/screenshot.png)
 
-> 📌 demo VIDEO
+> 📌 demo Gif
 
-![C-PLAYER Demo](assets/demo.mp4)
+![C-PLAYER Demo](assets/demo.gif)
 
 ---
 
