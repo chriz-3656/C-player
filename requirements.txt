@@ -1,0 +1,5 @@
+textual
+ytmusicapi
+yt-dlp
+pyfiglet
+
