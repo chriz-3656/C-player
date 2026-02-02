@@ -11,8 +11,16 @@ It is designed to be **lightweight, fast, keyboard-driven**, and ideal for Linux
 * 🔍 Search songs directly from **YouTube Music**
 * 🎧 High-quality audio playback via **mpv**
 * ⌨️ Fully keyboard-driven interface
-* 📊 Real-time progress bar & metadata display
+* 📊 Real-time progress bar & metadata display with **duration timer**
 * 🎶 Lightweight terminal audio visualizer
+* 🔊 **Volume display indicator** with visual feedback
+* 🎵 **Queue highlighting** - see currently playing song
+* 📜 **Search history** with up/down arrow navigation
+* 💾 **Local playlist management** - save, load, and manage custom playlists
+* 📖 **Playback history tracking** - view recently played tracks
+* 🎼 **YouTube Music playlist support** - paste playlist URLs to load entire playlists
+* 🔄 **Autoplay next song** - seamless playback through queue
+* 🎯 **Auto-load trending songs** on startup
 * ⚡ Minimal CPU & RAM usage
 * 🧩 Modular and extensible architecture
 
@@ -68,6 +76,8 @@ C-PLAYER follows a clean, layered design separating UI, logic, and services.
 
 * **`ytmusic.py`** — YouTube Music search using `ytmusicapi`
 * **`resolver.py`** — Audio stream resolution using `yt-dlp`
+* **`playlist_manager.py`** — Local playlist save/load functionality
+* **`history_manager.py`** — Playback history tracking
 
 ### 🔹 UI Layer (`app/ui/`)
 
@@ -87,7 +97,9 @@ C-player
 │   │   └── queue.py
 │   ├── services
 │   │   ├── ytmusic.py
-│   │   └── resolver.py
+│   │   ├── resolver.py
+│   │   ├── playlist_manager.py
+│   │   └── history_manager.py
 │   ├── ui
 │   │   ├── banner.py
 │   │   ├── panels.py
@@ -111,10 +123,10 @@ C-player
 
 ### Python Dependencies
 
-* textual
-* yt-dlp
-* ytmusicapi
-* pyfiglet
+* textual — Modern TUI framework
+* yt-dlp — YouTube video/audio downloader
+* ytmusicapi — YouTube Music API wrapper
+* pyfiglet — ASCII art text rendering
 
 ---
 
@@ -163,6 +175,7 @@ chmod +x run.sh
 
 ## ⌨️ Keyboard Controls
 
+### Playback Controls
 | Key      | Action              |
 | -------- | ------------------- |
 | Enter    | Play selected track |
@@ -173,26 +186,55 @@ chmod +x run.sh
 | -        | Volume down         |
 | Ctrl + Q | Exit application    |
 
+### Search Controls
+| Key        | Action                           |
+| ---------- | -------------------------------- |
+| Up Arrow   | Navigate search history (previous) |
+| Down Arrow | Navigate search history (next)     |
+
+### Playlist Commands
+Enter these commands in the search box:
+
+| Command            | Description                              |
+| ------------------ | ---------------------------------------- |
+| `:save <name>`     | Save current queue as a playlist         |
+| `:load <name>`     | Load a saved playlist                    |
+| `:playlists`       | List all saved playlists                 |
+| `:history`         | Load recently played tracks (last 20)    |
+
+### Playlist URL Support
+Paste any YouTube Music playlist URL in the search box to load all songs from that playlist.
+
 ---
 
 ## 🚀 How It Works (Execution Flow)
 
-1. User types a search query
-2. `ytmusicapi` fetches results from YouTube Music
-3. Selected track ID is resolved via `yt-dlp`
-4. Direct audio stream URL is passed to `mpv`
-5. `mpv` playback is controlled via IPC
-6. UI updates metadata and progress in real time
+1. **Startup**: App loads trending songs from YouTube Music charts automatically
+2. **Search**: User types a search query or pastes a playlist URL
+3. **Fetch**: `ytmusicapi` fetches results from YouTube Music
+4. **Select**: User selects a track to play
+5. **Resolve**: Selected track ID is resolved via `yt-dlp` to get direct audio stream URL
+6. **Playback**: Direct audio stream URL is passed to `mpv`
+7. **Control**: `mpv` playback is controlled via IPC socket (`/tmp/cplayer.sock`)
+8. **UI Updates**: UI updates metadata, progress bar, timer, and visualizer in real time
+9. **Autoplay**: When a song ends, automatically plays the next track in queue
+10. **History**: Track is saved to playback history for future reference
 
 ---
 
 ## 🧠 Extensibility Ideas
 
-* Playlist support
+* ~~Playlist support~~ ✅ **Implemented** (Local playlists & YouTube Music playlists)
+* ~~Playback history~~ ✅ **Implemented**
+* ~~Volume indicator~~ ✅ **Implemented**
+* ~~Search history~~ ✅ **Implemented**
 * Offline caching
 * Theme switching
 * Plugin system
 * Spotify / SoundCloud support
+* Shuffle & Repeat modes
+* Seek forward/backward controls
+* Lyrics display
 * Packaging as `.deb` / AppImage / pip package
 
 ---

@@ -11,6 +11,7 @@ class Player:
         self.running = False
         self.time_pos = 0
         self.duration = 1
+        self.volume = 100  # Default volume
 
     def play(self, track):
         self.stop()
@@ -45,23 +46,45 @@ class Player:
 
             self._send(["observe_property", 1, "time-pos"])
             self._send(["observe_property", 2, "duration"])
+            self._send(["observe_property", 3, "volume"])
 
             while self.running:
                 data = self.sock.recv(4096)
+                if not data:
+                    # Connection closed by peer
+                    break
                 for line in data.splitlines():
                     msg = json.loads(line.decode())
                     if msg.get("name") == "time-pos":
                         self.time_pos = msg.get("data") or 0
                     elif msg.get("name") == "duration":
                         self.duration = msg.get("data") or 1
+                    elif msg.get("name") == "volume":
+                        self.volume = int(msg.get("data") or 100)
                     elif msg.get("event") == "end-file":
                         self.on_end()
         except Exception:
             pass
+        finally:
+            # Clean up socket on exit
+            try:
+                if self.sock:
+                    self.sock.close()
+                    self.sock = None
+            except:
+                pass
 
     def _send(self, cmd):
         if self.sock:
-            self.sock.sendall((json.dumps({"command": cmd}) + "\n").encode())
+            try:
+                self.sock.sendall((json.dumps({"command": cmd}) + "\n").encode())
+            except (OSError, BrokenPipeError):
+                # Socket is disconnected, close it and set to None
+                try:
+                    self.sock.close()
+                except:
+                    pass
+                self.sock = None
 
     def toggle_pause(self):
         self._send(["cycle", "pause"])
