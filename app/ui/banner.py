@@ -20,7 +20,7 @@ class Banner(Static):
     
     def on_mount(self):
         fig = pyfiglet.Figlet(font="slant")
-        text = fig.renderText("C-PLAYER")
+        text = fig.renderText("C-PLAYER").rstrip()
         
         logo_widget = self.query_one("#banner-logo", BannerLogo)
         logo_widget.update(f"[#818cf8]{text}[/#818cf8]\n[dim]YouTube Music Terminal Player[/dim]")
@@ -37,10 +37,10 @@ class Banner(Static):
         
         info_widget = self.query_one("#banner-info", BannerInfo)
         info_widget.update(
-            "[b #818cf8]      C-PLAYER v1.0[/b #818cf8]\n"
-            "[b]Creator:[/b]  Chris\n"
-            "[b]GitHub:[/b]   chriz-3656\n"
+            "[b #818cf8]C-PLAYER v1.0[/b #818cf8]\n\n"
+            "[b]Creator:[/b] Chris\n"
+            "[b]GitHub:[/b]  chriz-3656\n"
             "[dim]https://github.com/chriz-3656[/dim]"
         )
         
-        self.styles.height = 9
+        self.styles.height = 10

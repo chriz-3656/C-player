@@ -8,7 +8,7 @@ from app.ui.visualizer import Visualizer
 from app.ui.panels import MetadataPanel, format_time
 from app.controller.player import Player
 from app.controller.queue import Queue
-from app.services.ytmusic import search_tracks, get_random_songs, get_playlist_songs
+from app.services.ytmusic import search_tracks, get_random_songs, get_playlist_songs, get_watch_song
 from app.services.playlist_manager import save_playlist, load_playlist, list_playlists
 from app.services.history_manager import add_to_history, get_recent_tracks
 
@@ -67,19 +67,21 @@ class CPlayer(App):
     }
     
     #banner-logo {
-        width: 2fr;
+        width: 3fr;
+        padding: 0 1 0 0;
+        text-align: left;
     }
     
     #banner-controls {
         width: 2fr;
-        padding: 1;
+        padding: 1 1;
         text-align: center;
     }
     
     #banner-info {
-        width: 1fr;
+        width: 2fr;
         text-align: right;
-        padding: 1;
+        padding: 1 0 1 1;
     }
     
     .spacer { 
@@ -91,7 +93,7 @@ class CPlayer(App):
         border: solid #6366f1;
         padding: 1;
         height: auto;
-        min-height: 12;
+        min-height: 16;
         background: #1a1a2e;
     }
     
@@ -115,6 +117,22 @@ class CPlayer(App):
         height: 1;
     }
     
+    #status-display {
+        text-align: center;
+        color: #6366f1;
+        margin: 1 0 0 0;
+        height: 1;
+        min-height: 1;
+    }
+    
+    #volume-display {
+        text-align: center;
+        color: #fbbf24;
+        margin: 0 0 1 0;
+        height: 1;
+        min-height: 1;
+    }
+    
     Visualizer {
         border: solid #6366f1;
         padding: 1;
@@ -130,26 +148,41 @@ class CPlayer(App):
         height: 100%;
     }
     
-    #status {
-        text-align: left;
+    #status-panel {
         background: #1a1a2e;
-        color: #818cf8;
-        padding: 0 1;
-        height: auto;
-        min-height: 1;
         border: solid #6366f1;
         border-top: none;
+        padding: 1;
+        height: 3;
+        min-height: 3;
     }
     
-    #volume_display {
+    #status-container {
+        height: 100%;
+        width: 100%;
+    }
+    
+    #status-main {
+        text-align: left;
+        color: #818cf8;
+        height: 1;
+    }
+    
+    #status-secondary {
         text-align: right;
-        background: #1a1a2e;
         color: #fbbf24;
-        padding: 0 1;
-        height: auto;
-        min-height: 1;
-        border: solid #6366f1;
-        border-top: none;
+        height: 1;
+        margin-top: 1;
+    }
+    
+    #status-icon {
+        color: #6366f1;
+        margin-right: 1;
+    }
+    
+    #volume-icon {
+        color: #fbbf24;
+        margin-left: 1;
     }
     
     ProgressBar > .bar--indeterminate {
@@ -175,7 +208,7 @@ class CPlayer(App):
             yield Vertical(classes="spacer")
 
             with Vertical(classes="side-panels"):
-                self.meta = MetadataPanel()
+                self.meta = MetadataPanel(id="metadata_panel")
                 yield self.meta
 
             yield Vertical(classes="spacer")
@@ -183,8 +216,6 @@ class CPlayer(App):
             with Vertical(id="visualizer-container"):
                 self.visualizer = Visualizer()
                 yield self.visualizer
-                yield Label("Ready", id="status")
-                yield Label("", id="volume_display")
 
         yield Footer()
 
@@ -196,16 +227,42 @@ class CPlayer(App):
         self.volume_display_timer = None
         self.search_history = []
         self.history_index = -1
+        self.current_icon = "○"  # Default icon
+        
+        # Initialize integrated status display
+        self.update_status("Ready")
+        self.update_volume_display(100)
         
         # Load random songs on startup
         self.load_random_songs()
     
+    def update_status(self, main_message, secondary_message="", icon=None):
+        """Update the integrated status display in metadata panel"""
+        if icon:
+            self.current_icon = icon
+        
+        status_display = self.query_one("#metadata_panel").query_one("#status-display", Label)
+        
+        # Add icon to main message
+        main_with_icon = f"{self.current_icon} {main_message}"
+        status_display.update(f"[dim]Status: {main_with_icon}[/dim]")
+    
+    def update_volume_display(self, volume):
+        """Update volume display in metadata panel"""
+        volume_display = self.query_one("#metadata_panel").query_one("#volume-display", Label)
+        volume_display.update(f"[dim]Volume: {volume}%[/dim]")
+    
+    def show_volume_temporarily(self):
+        """Show volume indicator temporarily in metadata panel"""
+        if self.volume_display_timer:
+            self.volume_display_timer.cancel()
+        self.volume_display_timer = self.set_timer(2.0, lambda: self.update_volume_display(self.player.volume))
+    
     def load_random_songs(self):
         """Load random/trending songs into the list on startup"""
         lv = self.query_one("#results", ListView)
-        status_label = self.query_one("#status", Label)
         
-        status_label.update("Loading trending songs...")
+        self.update_status("Loading trending songs...", "Please wait...")
         
         tracks = get_random_songs()
         if tracks:
@@ -214,9 +271,9 @@ class CPlayer(App):
                 item = ListItem(Label(f"{t['title']} — {t['artist']}"))
                 item.track = t
                 lv.append(item)
-            status_label.update(f"Ready - {len(tracks)} trending songs loaded")
+            self.update_status(f"Ready - {len(tracks)} songs", f"Volume: {self.player.volume}%")
         else:
-            status_label.update("Ready - Failed to load trending songs")
+            self.update_status("Ready", "Failed to load trending songs")
 
     def on_unmount(self):
         self.player.stop()
@@ -233,11 +290,11 @@ class CPlayer(App):
             playlist_name = input_value[6:].strip()
             if playlist_name and self.queue.tracks:
                 if save_playlist(playlist_name, self.queue.tracks):
-                    self.query_one("#status", Label).update(f"✓ Playlist '{playlist_name}' saved")
+                    self.update_status(f"Playlist '{playlist_name}' saved", f"Volume: {self.player.volume}%")
                 else:
-                    self.query_one("#status", Label).update("✖ Failed to save playlist")
+                    self.update_status("Error", "Failed to save playlist")
             else:
-                self.query_one("#status", Label).update("✖ Invalid playlist name or empty queue")
+                self.update_status("Error", "Invalid playlist name or empty queue")
             return
         
         elif input_value.startswith(":load "):
@@ -250,18 +307,18 @@ class CPlayer(App):
                     item = ListItem(Label(f"{t['title']} — {t['artist']}"))
                     item.track = t
                     lv.append(item)
-                self.query_one("#status", Label).update(f"✓ Loaded playlist '{playlist_name}' ({len(tracks)} songs)")
+                self.update_status(f"Loaded '{playlist_name}'", f"{len(tracks)} songs")
             else:
-                self.query_one("#status", Label).update(f"✖ Playlist '{playlist_name}' not found")
+                self.update_status("Error", f"Playlist '{playlist_name}' not found")
             return
         
         elif input_value == ":playlists":
             # Show available playlists
             playlists = list_playlists()
             if playlists:
-                self.query_one("#status", Label).update(f"Saved playlists: {', '.join(playlists)}")
+                self.update_status("Playlists", f"{', '.join(playlists)}")
             else:
-                self.query_one("#status", Label).update("No saved playlists")
+                self.update_status("Playlists", "No saved playlists")
             return
         
         elif input_value == ":history":
@@ -273,9 +330,9 @@ class CPlayer(App):
                     item = ListItem(Label(f"{t['title']} — {t['artist']}"))
                     item.track = t
                     lv.append(item)
-                self.query_one("#status", Label).update(f"✓ Loaded {len(tracks)} tracks from history")
+                self.update_status("History loaded", f"{len(tracks)} tracks")
             else:
-                self.query_one("#status", Label).update("No playback history")
+                self.update_status("History", "No playback history")
             return
         
         # Add to search history
@@ -285,20 +342,47 @@ class CPlayer(App):
         
         # Check if input is a playlist URL
         if "list=" in input_value or "playlist" in input_value:
-            self.query_one("#status", Label).update("Loading playlist...")
+            self.update_status("Loading playlist...", "Please wait...")
             tracks = get_playlist_songs(input_value)
             if not tracks:
-                self.query_one("#status", Label).update("✖ Failed to load playlist")
+                # Provide more specific error messages
+                if "RDCLAK" in input_value or "mix" in input_value.lower():
+                    self.update_status("Error", "Mix playlists not supported")
+                elif len(input_value) < 10:
+                    self.update_status("Error", "Invalid playlist ID")
+                else:
+                    self.update_status("Error", "Failed to load playlist")
                 return
-            self.query_one("#status", Label).update(f"Ready - {len(tracks)} songs from playlist")
+            self.update_status(f"Loaded {len(tracks)} songs", f"Volume: {self.player.volume}%")
+        
+        # Check if input is a watch URL (individual video)
+        elif "watch?v=" in input_value or "youtu.be/" in input_value:
+            self.update_status("Loading video...", "Please wait...")
+            song = get_watch_song(input_value)
+            if not song:
+                self.update_status("Error", "Failed to load video")
+                return
+            
+            # Create a single-item queue with this song
+            tracks = [song]
+            self.queue.load(tracks)
+            
+            # Clear and populate the list view
+            lv = self.query_one("#results", ListView)
+            lv.clear()
+            item = ListItem(Label(f"{song['title']} — {song['artist']}"))
+            item.track = song
+            lv.append(item)
+            
+            self.update_status(f"Loaded: {song['title']}", f"Volume: {self.player.volume}%")
         else:
             # Regular search
-            self.query_one("#status", Label).update("Searching...")
+            self.update_status("Searching...", "Please wait...")
             tracks = search_tracks(input_value)
             if not tracks:
-                self.query_one("#status", Label).update("✖ Search failed or no results")
+                self.update_status("Search", "No results found")
                 return
-            self.query_one("#status", Label).update("Ready")
+            self.update_status("Ready", f"Found {len(tracks)} tracks")
 
         self.queue.load(tracks)
 
@@ -312,11 +396,11 @@ class CPlayer(App):
         success = self.queue.play_single(track)
         if success:
             self.meta.update_track(track)
-            self.query_one("#status", Label).update("▶ Playing")
+            self.update_status("▶ Playing", track['title'][:30] + "..." if len(track['title']) > 30 else track['title'])
             self.highlight_current_track()
             add_to_history(track)  # Add to playback history
         else:
-            self.query_one("#status", Label).update("✖ Failed to load track")
+            self.update_status("Error", "Failed to load track")
     
     def highlight_current_track(self):
         """Highlight the currently playing track in the list"""
@@ -351,13 +435,13 @@ class CPlayer(App):
             if success:
                 track = self.queue.tracks[self.queue.index]
                 self.meta.update_track(track)
-                self.query_one("#status", Label).update("▶ Playing")
+                self.update_status("▶ Playing", track['title'][:30] + "..." if len(track['title']) > 30 else track['title'])
                 self.highlight_current_track()
                 add_to_history(track)  # Add to playback history
             else:
-                self.query_one("#status", Label).update("✖ Failed to load next track")
+                self.update_status("Error", "Failed to load next track")
         else:
-            self.query_one("#status", Label).update("■ Queue Ended")
+            self.update_status("Queue Ended", "No more tracks")
 
     async def on_key(self, event: events.Key):
         # Handle search history navigation
@@ -390,27 +474,27 @@ class CPlayer(App):
             if success:
                 track = self.queue.tracks[self.queue.index]
                 self.meta.update_track(track)
-                self.query_one("#status", Label).update("▶ Playing")
+                self.update_status("▶ Playing", track['title'][:30] + "..." if len(track['title']) > 30 else track['title'])
                 self.highlight_current_track()
                 add_to_history(track)  # Add to playback history
             else:
-                self.query_one("#status", Label).update("✖ Failed to load track")
+                self.update_status("Error", "No next track")
         elif event.key == "p":
             success = self.queue.previous()
             if success:
                 track = self.queue.tracks[self.queue.index]
                 self.meta.update_track(track)
-                self.query_one("#status", Label).update("▶ Playing")
+                self.update_status("▶ Playing", track['title'][:30] + "..." if len(track['title']) > 30 else track['title'])
                 self.highlight_current_track()
                 add_to_history(track)  # Add to playback history
             else:
-                self.query_one("#status", Label).update("✖ Failed to load track")
+                self.update_status("Error", "No previous track")
         elif event.key in ("+", "="):
             self.player.volume_up()
-            self.show_volume()
+            self.update_volume_display(self.player.volume)
         elif event.key == "-":
             self.player.volume_down()
-            self.show_volume()
+            self.update_volume_display(self.player.volume)
         elif event.key == "ctrl+q":
             self.player.stop()
             await self.action_quit()

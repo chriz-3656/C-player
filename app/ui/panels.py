@@ -13,6 +13,8 @@ class MetadataPanel(Static):
             yield Label("", id="track_info")
             yield Label("00:00 / 00:00", id="time_label")
             yield ProgressBar(id="progress")
+            yield Label("[dim]Status: Stopped[/dim]", id="status-display")
+            yield Label("[dim]Volume: 50%[/dim]", id="volume-display")
     
     def on_mount(self):
         track_info = self.query_one("#track_info", Label)

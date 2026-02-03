@@ -21,6 +21,8 @@ It is designed to be **lightweight, fast, keyboard-driven**, and ideal for Linux
 * 🎼 **YouTube Music playlist support** - paste playlist URLs to load entire playlists
 * 🔄 **Autoplay next song** - seamless playback through queue
 * 🎯 **Auto-load trending songs** on startup
+* 🔗 **Direct YouTube URL support** - paste YouTube watch URLs to play specific songs
+* 🖼️ **Optimized banner layout** - improved alignment and visual presentation
 * ⚡ Minimal CPU & RAM usage
 * 🧩 Modular and extensible architecture
 
@@ -228,6 +230,8 @@ Paste any YouTube Music playlist URL in the search box to load all songs from th
 * ~~Playback history~~ ✅ **Implemented**
 * ~~Volume indicator~~ ✅ **Implemented**
 * ~~Search history~~ ✅ **Implemented**
+* ~~Direct YouTube URL support~~ ✅ **Implemented**
+* ~~Banner layout optimization~~ ✅ **Implemented**
 * Offline caching
 * Theme switching
 * Plugin system
@@ -236,6 +240,23 @@ Paste any YouTube Music playlist URL in the search box to load all songs from th
 * Seek forward/backward controls
 * Lyrics display
 * Packaging as `.deb` / AppImage / pip package
+
+---
+
+## 🆕 Recent Improvements
+
+### Version 1.1 - Enhanced Functionality & UI Optimization
+
+* **Direct YouTube URL Support**: Added ability to paste YouTube watch URLs directly to play specific songs
+* **Banner Layout Optimization**: Improved visual alignment and spacing in the header section
+* **Enhanced Metadata Display**: Better organization and presentation of track information
+* **Code Structure Improvements**: Cleaned up imports and optimized component layouts
+
+### Key Changes:
+* Added `get_watch_song()` function in YouTube Music service for URL parsing
+* Optimized banner component spacing and text alignment
+* Improved CSS styling for better visual hierarchy
+* Enhanced user experience with cleaner interface layout
 
 ---
 
